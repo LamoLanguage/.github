@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lamo — a language that compiles to C, not around it</title>
+<meta name="description" content="Lamo is an experimental programming language that transpiles to C. Explore the full ecosystem: compiler, VS Code extension, image format, and more.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0D0F13;
+    --bg-raised:#14171D;
+    --bg-inset:#0A0C0F;
+    --line:#262B34;
+    --line-soft:#1B1F27;
+    --text:#E7E5DE;
+    --text-dim:#8B92A0;
+    --text-faint:#565D6B;
+    --accent:#E8A33D;
+    --accent-soft:#4A3A20;
+    --green:#5FBF7A;
+    --blue:#6FA8DC;
+    --purple:#B58AE0;
+    --mono:'IBM Plex Mono', ui-monospace, monospace;
+    --sans:'IBM Plex Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.6;
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  ::selection{background:var(--accent-soft); color:var(--accent);}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 28px;}
+  h1,h2,h3,h4{font-family:var(--mono); font-weight:600; letter-spacing:-0.01em;}
+  code, .mono{font-family:var(--mono);}
+
+  /* focus visibility */
+  a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:2px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- NAV ---------- */
+  header.nav{
+    position:sticky; top:0; z-index:50;
+    background:rgba(13,15,19,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .nav-inner{
+    display:flex; align-items:center; justify-content:space-between;
+    height:60px;
+  }
+  .brand{
+    display:flex; align-items:center; gap:9px;
+    font-family:var(--mono); font-weight:600; font-size:16px; color:var(--text);
+  }
+  .brand .spark{color:var(--accent); font-size:17px;}
+  nav.links{display:flex; gap:28px; align-items:center;}
+  nav.links a{
+    font-size:14px; color:var(--text-dim); font-family:var(--sans);
+    transition:color .15s ease;
+  }
+  nav.links a:hover{color:var(--text);}
+  .nav-cta{
+    font-family:var(--mono); font-size:13px; padding:7px 14px;
+    border:1px solid var(--line); border-radius:4px; color:var(--text);
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .nav-cta:hover{border-color:var(--accent); color:var(--accent);}
+  @media(max-width:720px){ nav.links{display:none;} }
+
+  /* ---------- HERO ---------- */
+  .hero{padding:96px 0 72px; position:relative; overflow:hidden;}
+  .hero-grid{
+    display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center;
+  }
+  @media(max-width:900px){ .hero-grid{grid-template-columns:1fr;} }
+
+  .kicker{
+    font-family:var(--mono); font-size:13px; color:var(--accent);
+    display:flex; align-items:center; gap:9px; margin-bottom:22px;
+  }
+  .kicker .dot{width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green);}
+
+  h1.headline{
+    font-size:clamp(34px, 5vw, 52px);
+    line-height:1.12;
+    letter-spacing:-0.02em;
+    color:var(--text);
+    margin-bottom:22px;
+  }
+  h1.headline .amber{color:var(--accent);}
+
+  p.sub{
+    font-size:17px; color:var(--text-dim); max-width:46ch; margin-bottom:32px;
+  }
+
+  .cta-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:36px;}
+  .btn{
+    font-family:var(--mono); font-size:14px; padding:11px 18px; border-radius:5px;
+    display:inline-flex; align-items:center; gap:8px;
+    transition:transform .12s ease, border-color .15s ease, background .15s ease;
+  }
+  .btn-primary{background:var(--accent); color:#1A1204; font-weight:600;}
+  .btn-primary:hover{transform:translateY(-1px); background:#f0ad4e;}
+  .btn-ghost{border:1px solid var(--line); color:var(--text);}
+  .btn-ghost:hover{border-color:var(--text-dim); transform:translateY(-1px);}
+
+  .stat-row{display:flex; gap:28px; font-family:var(--mono); font-size:13px; color:var(--text-faint);}
+  .stat-row b{color:var(--text); font-weight:600; display:block; font-size:20px; font-family:var(--mono);}
+
+  /* terminal */
+  .terminal{
+    background:var(--bg-inset); border:1px solid var(--line); border-radius:8px;
+    overflow:hidden; box-shadow:0 30px 60px -20px rgba(0,0,0,0.6);
+  }
+  .terminal-bar{
+    display:flex; align-items:center; gap:7px; padding:11px 14px;
+    background:var(--bg-raised); border-bottom:1px solid var(--line);
+  }
+  .terminal-bar span{width:10px; height:10px; border-radius:50%; background:#3a3f4a;}
+  .terminal-bar .path{margin-left:8px; font-family:var(--mono); font-size:12px; color:var(--text-faint);}
+  .terminal-body{padding:22px 20px; font-family:var(--mono); font-size:13.5px; min-height:210px;}
+  .terminal-body .line{margin-bottom:6px; white-space:pre-wrap;}
+  .terminal-body .prompt{color:var(--green);}
+  .terminal-body .cmd{color:var(--text);}
+  .terminal-body .out{color:var(--text-dim);}
+  .terminal-body .ok{color:var(--green);}
+  .caret{display:inline-block; width:7px; height:15px; background:var(--accent); vertical-align:middle; animation:blink 1s steps(1) infinite;}
+  @keyframes blink{ 50%{opacity:0;} }
+
+  /* ---------- PHILOSOPHY STRIP ---------- */
+  .strip{border-top:1px solid var(--line-soft); border-bottom:1px solid var(--line-soft); padding:52px 0; background:var(--bg-raised);}
+  .strip blockquote{
+    font-family:var(--mono); font-size:clamp(20px,2.6vw,28px); line-height:1.4;
+    max-width:22ch; color:var(--text);
+  }
+  .strip blockquote span{color:var(--accent);}
+  .strip .who{margin-top:16px; font-size:14px; color:var(--text-faint); font-family:var(--mono);}
+
+  /* ---------- SECTION HEADS ---------- */
+  section{padding:88px 0;}
+  .sec-head{margin-bottom:44px; max-width:56ch;}
+  .sec-head .num{font-family:var(--mono); font-size:13px; color:var(--text-faint); margin-bottom:10px; display:block;}
+  .sec-head h2{font-size:clamp(24px,3vw,32px); color:var(--text); margin-bottom:12px;}
+  .sec-head p{color:var(--text-dim); font-size:15.5px;}
+
+  /* ---------- FEATURES ---------- */
+  .feat-panel{
+    border:1px solid var(--line); border-radius:8px; background:var(--bg-raised);
+    display:grid; grid-template-columns:repeat(2,1fr);
+  }
+  @media(max-width:720px){ .feat-panel{grid-template-columns:1fr;} }
+  .feat-item{
+    padding:22px 24px; border-bottom:1px solid var(--line-soft);
+    display:flex; gap:14px; align-items:flex-start;
+  }
+  .feat-panel .feat-item:nth-child(odd){border-right:1px solid var(--line-soft);}
+  .feat-item .mark{color:var(--accent); font-family:var(--mono); font-size:14px; margin-top:2px;}
+  .feat-item h4{font-size:14.5px; color:var(--text); margin-bottom:5px; font-weight:600;}
+  .feat-item p{font-size:13.8px; color:var(--text-dim); line-height:1.55;}
+
+  /* ---------- CODE TASTE ---------- */
+  .code-cols{display:grid; grid-template-columns:1fr 1fr; gap:24px;}
+  @media(max-width:820px){ .code-cols{grid-template-columns:1fr;} }
+  .code-block{
+    background:var(--bg-inset); border:1px solid var(--line); border-radius:8px; overflow:hidden;
+  }
+  .code-block .cb-head{
+    padding:10px 16px; border-bottom:1px solid var(--line); font-family:var(--mono);
+    font-size:12.5px; color:var(--text-faint); background:var(--bg-raised);
+  }
+  .code-block pre{padding:20px; overflow-x:auto; font-family:var(--mono); font-size:13.2px; line-height:1.7;}
+  .code-block code{color:var(--text-dim);}
+  .kw{color:var(--purple);}
+  .ty{color:var(--blue);}
+  .st{color:var(--green);}
+  .cm{color:var(--text-faint);}
+  .fn{color:var(--accent);}
+
+  /* ---------- CLI TABLE ---------- */
+  .cli-table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:13.5px;}
+  .cli-table th{
+    text-align:left; padding:10px 16px; color:var(--text-faint); font-weight:500;
+    border-bottom:1px solid var(--line); font-size:12px;
+  }
+  .cli-table td{padding:13px 16px; border-bottom:1px solid var(--line-soft); vertical-align:top;}
+  .cli-table td:first-child{color:var(--accent); white-space:nowrap;}
+  .cli-table td:last-child{color:var(--text-dim); font-family:var(--sans); font-size:14px;}
+  .cli-wrap{border:1px solid var(--line); border-radius:8px; overflow:hidden; background:var(--bg-raised);}
+  .cli-wrap .cli-table tr:last-child td{border-bottom:none;}
+
+  /* ---------- ECOSYSTEM ---------- */
+  .repo-list{display:flex; flex-direction:column; gap:1px; background:var(--line-soft); border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+  .repo{
+    background:var(--bg-raised); padding:26px 28px;
+    display:grid; grid-template-columns:220px 1fr auto; gap:24px; align-items:start;
+    border-left:3px solid var(--lang-color, var(--text-faint));
+    transition:background .15s ease;
+  }
+  .repo:hover{background:#171B22;}
+  @media(max-width:760px){ .repo{grid-template-columns:1fr; gap:10px;} }
+
+  .repo-id{font-family:var(--mono);}
+  .repo-id .org{color:var(--text-faint); font-size:13px;}
+  .repo-id .name{display:block; color:var(--text); font-size:16px; font-weight:600; margin-top:2px;}
+  .repo-id .name a{border-bottom:1px solid transparent;}
+  .repo-id .name a:hover{border-bottom-color:var(--accent); color:var(--accent);}
+
+  .repo-desc p{color:var(--text-dim); font-size:14.3px; line-height:1.6; max-width:56ch;}
+  .repo-desc .tags{margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;}
+  .tag{
+    font-family:var(--mono); font-size:11px; padding:3px 8px; border-radius:3px;
+    border:1px solid var(--line); color:var(--text-faint);
+  }
+  .tag.lang{color:var(--lang-color, var(--text-dim)); border-color:var(--lang-color, var(--line));}
+  .tag.status-archived{color:var(--text-faint); border-style:dashed;}
+  .tag.status-active{color:var(--green); border-color:#2c4a35;}
+
+  .repo-meta{font-family:var(--mono); font-size:12.5px; color:var(--text-faint); text-align:right; white-space:nowrap;}
+  .repo-meta .stars{color:var(--accent);}
+  @media(max-width:760px){ .repo-meta{text-align:left;} }
+
+  /* ---------- ROADMAP ---------- */
+  .roadmap{border-left:1px solid var(--line); padding-left:28px; margin-left:6px;}
+  .rm-item{position:relative; padding-bottom:22px;}
+  .rm-item:last-child{padding-bottom:0;}
+  .rm-item::before{
+    content:''; position:absolute; left:-33px; top:4px; width:11px; height:11px; border-radius:50%;
+    background:var(--bg); border:2px solid var(--text-faint);
+  }
+  .rm-item.done::before{background:var(--green); border-color:var(--green);}
+  .rm-item .rm-text{font-size:14.5px; color:var(--text-dim); font-family:var(--mono); line-height:1.6;}
+  .rm-item.done .rm-text{color:var(--text);}
+  .rm-item .rm-text s{color:transparent; opacity:0;}
+
+  /* ---------- FOOTER ---------- */
+  footer{border-top:1px solid var(--line-soft); padding:48px 0 40px;}
+  .foot-grid{display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:24px;}
+  footer .brand{margin-bottom:8px;}
+  footer p{color:var(--text-faint); font-size:13.5px; max-width:40ch;}
+  .foot-links{display:flex; gap:20px; font-family:var(--mono); font-size:13px;}
+  .foot-links a{color:var(--text-dim);}
+  .foot-links a:hover{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="spark">⚡</span>lamo</div>
+    <nav class="links">
+      <a href="#language">Language</a>
+      <a href="#code">Syntax</a>
+      <a href="#cli">CLI</a>
+      <a href="#ecosystem">Ecosystem</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+    <a class="nav-cta" href="https://github.com/LamoLanguage" target="_blank" rel="noopener">github.com/LamoLanguage</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="kicker"><span class="dot"></span>v2.7.0 — experimental, actively developed</div>
+      <h1 class="headline">A language that compiles <span class="amber">to</span> C,<br>not around it.</h1>
+      <p class="sub">Lamo transpiles readable, modern syntax straight into C, then hands it to GCC. No VM, no bytecode, no interpreter sitting in the hot path — just native binaries out the other end.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/LamoLanguage/LamoLanguage" target="_blank" rel="noopener">Read the source</a>
+        <a class="btn btn-ghost" href="https://github.com/LamoLanguage/LamoLanguage/blob/main/docs/SPEC.md" target="_blank" rel="noopener">Language spec</a>
+      </div>
+      <div class="stat-row">
+        <div><b>6</b>repositories</div>
+        <div><b>C</b>backend</div>
+        <div><b>MIT</b>licensed</div>
+      </div>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span></span><span></span><span></span>
+        <span class="path">hello.lamo — zsh</span>
+      </div>
+      <div class="terminal-body" id="termBody"></div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="wrap">
+    <blockquote>“As simple as an <span>interpreted</span> language. As fast as a <span>compiled</span> one.”</blockquote>
+    <div class="who">— the one rule Lamo's design follows</div>
+  </div>
+</div>
+
+<section id="language">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="num">01 / language</span>
+      <h2>Small on purpose</h2>
+      <p>Every construct in Lamo ships with defined semantics, compiler validation and tests. Syntax never outruns meaning — so the feature list stays short, and everything on it actually works.</p>
+    </div>
+    <div class="feat-panel">
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Transpiles to C</h4><p>Native executables, no VM. Your program becomes readable C, then a real binary.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Generics</h4><p>Generic functions, structs, <code>impl&lt;T&gt;</code>, and trait-like constraints such as <code>T: Ord</code>.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Tagged-union enums</h4><p><code>Option&lt;T&gt;</code>-style enums with <code>Some(x) =></code> match bindings and nested destructuring.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Structs & methods</h4><p><code>struct</code> and <code>impl</code> blocks with an implicit <code>self</code>, much like the languages it borrows from.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Module system</h4><p>Namespaced imports (<code>import std.io</code>), <code>pub</code> export markers, folder-based modules.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Built-in package manager</h4><p><code>lamo install</code>, lockfiles, version pinning — no separate tool required.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Native HTTP & GUI builtins</h4><p>A server in the standard runtime, plus Win32 and X11 GUI backends.</p></div></div>
+      <div class="feat-item"><span class="mark">▸</span><div><h4>Opt-in GC</h4><p>A mark-sweep collector for long-running programs — off by default, on when you need it.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="code">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="num">02 / syntax</span>
+      <h2>What it reads like</h2>
+      <p>Clean, C-adjacent syntax with optional semicolons and Python-like truthiness. Generics landed in 2.5.0.</p>
+    </div>
+    <div class="code-cols">
+      <div class="code-block">
+        <div class="cb-head">structs.lamo</div>
+        <pre><code><span class="kw">struct</span> <span class="ty">Player</span> {
+    name: <span class="ty">string</span>,
+    hp: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span> <span class="ty">Player</span> {
+    <span class="kw">fn</span> <span class="fn">damage</span>(amount: <span class="ty">int</span>) {
+        self.hp -= amount
+    }
+}
+
+<span class="kw">let</span> hero = <span class="ty">Player</span> { name: <span class="st">"Arthur"</span>, hp: 100 }
+hero.damage(25)
+print(hero.hp)   <span class="cm">// 75</span></code></pre>
+      </div>
+      <div class="code-block">
+        <div class="cb-head">generics.lamo — new in 2.5</div>
+        <pre><code><span class="kw">fn</span> <span class="fn">pick</span>&lt;T&gt;(a: T, b: T) -&gt; T {
+    <span class="kw">if</span> (1 &lt; 2) { <span class="kw">return</span> a }
+    <span class="kw">return</span> b
+}
+
+<span class="kw">struct</span> <span class="ty">Stack</span>&lt;T&gt; {
+    items: array&lt;T&gt;,
+    top: <span class="ty">int</span>
+}
+
+<span class="kw">impl</span>&lt;T&gt; <span class="ty">Stack</span>&lt;T&gt; {
+    <span class="kw">fn</span> <span class="fn">push</span>(x: T) {
+        self.items.push(x)
+        self.top += 1
+    }
+}
+
+<span class="kw">let</span> s: Stack&lt;int&gt; = <span class="ty">Stack</span>&lt;int&gt; { items: [], top: 0 }
+s.push(10)
+print(pick(<span class="st">"left"</span>, <span class="st">"right"</span>))   <span class="cm">// "left"</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cli">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="num">03 / tooling</span>
+      <h2>The <code>lamo</code> binary</h2>
+      <p>One executable covers compiling, running, testing, formatting and packages — no extra tools to install.</p>
+    </div>
+    <div class="cli-wrap">
+      <table class="cli-table">
+        <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>lamo run &lt;file&gt;</td><td>Compile and run a source file in one step</td></tr>
+          <tr><td>lamo build &lt;file&gt; -o &lt;name&gt;</td><td>Compile to a binary without running it</td></tr>
+          <tr><td>lamo check &lt;file&gt;</td><td>Parse and semantic-check only — built for CI</td></tr>
+          <tr><td>lamo eval / lamo repl</td><td>Fast-feedback interpreter, no C compile step</td></tr>
+          <tr><td>lamo fmt &lt;file&gt;</td><td>Normalize source formatting in place</td></tr>
+          <tr><td>lamo test</td><td>Run the smoke, golden, runtime and stdlib suites</td></tr>
+          <tr><td>lamo new &lt;project&gt;</td><td>Scaffold a project: main.lamo, lamo.pkg, .gitignore</td></tr>
+          <tr><td>lamo install / update / list</td><td>Package manager subcommands</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="ecosystem">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="num">04 / ecosystem</span>
+      <h2>Everything under LamoLanguage</h2>
+      <p>Six repositories: the compiler itself, its editor support, a companion binary image format, an experimental LLM, a retired package manager, and the org's shared config.</p>
+    </div>
+
+    <div class="repo-list">
+
+      <div class="repo" style="--lang-color:#B58AE0">
+        <div class="repo-id">
+          <span class="org">LamoLanguage /</span>
+          <span class="name"><a href="https://github.com/LamoLanguage/LamoLanguage" target="_blank" rel="noopener">LamoLanguage</a></span>
+        </div>
+        <div class="repo-desc">
+          <p>The compiler itself — lexer, parser, semantic analyzer and C backend, written in pure C. Ships its own REPL, formatter, test harness, and a package manager bundled straight into the <code>lamo</code> binary.</p>
+          <div class="tags">
+            <span class="tag lang">C</span>
+            <span class="tag status-active">active · core</span>
+            <span class="tag">MIT</span>
+          </div>
+        </div>
+        <div class="repo-meta">★ <span class="stars">1</span><br>8 commits</div>
+      </div>
+
+      <div class="repo" style="--lang-color:#6FA8DC">
+        <div class="repo-id">
+          <span class="org">LamoLanguage /</span>
+          <span class="name"><a href="https://github.com/LamoLanguage/LamoImage" target="_blank" rel="noopener">LamoImage</a></span>
+        </div>
+        <div class="repo-desc">
+          <p>Reference implementation of the <code>.lamo</code> file format — a compact binary container packing PNG data plus JSON metadata into one file. Includes a PySide6 viewer and PNG/JPG/WebP ↔ <code>.lamo</code> converter GUI.</p>
+          <div class="tags">
+            <span class="tag lang" style="--lang-color:#F1C40F">Python</span>
+            <span class="tag status-active">active</span>
+            <span class="tag">MIT</span>
+          </div>
+        </div>
+        <div class="repo-meta">★ <span class="stars">1</span><br>27 commits</div>
+      </div>
+
+      <div class="repo" style="--lang-color:#F1C40F">
+        <div class="repo-id">
+          <span class="org">LamoLanguage /</span>
+          <span class="name"><a href="https://github.com/LamoLanguage/LamoLanguageVscode" target="_blank" rel="noopener">LamoLanguageVscode</a></span>
+        </div>
+        <div class="repo-desc">
+          <p>Editor support for VS Code: syntax highlighting for keywords, strings, numbers and comments, snippets for functions and control flow, and automatic bracket closing.</p>
+          <div class="tags">
+            <span class="tag lang">JavaScript</span>
+            <span class="tag status-active">active</span>
+            <span class="tag">MIT</span>
+          </div>
+        </div>
+        <div class="repo-meta">★ <span class="stars">1</span><br>5 commits</div>
+      </div>
+
+      <div class="repo" style="--lang-color:#B58AE0">
+        <div class="repo-id">
+          <span class="org">LamoLanguage /</span>
+          <span class="name"><a href="https://github.com/LamoLanguage/LamoLLM" target="_blank" rel="noopener">LamoLLM</a></span>
+        </div>
+        <div class="repo-desc">
+          <p>A ~1.1B-parameter decoder-only transformer built from scratch in PyTorch — pre-norm architecture, RoPE, Flash Attention and a Colab notebook for training and generation. Not Lamo-the-language specific; a standalone research build living in the org.</p>
+          <div class="tags">
+            <span class="tag lang" style="--lang-color:#F1C40F">Python</span>
+            <span class="tag status-active">active</span>
+            <span class="tag">MIT</span>
+          </div>
+        </div>
+        <div class="repo-meta">★ <span class="stars">0</span><br>7 commits</div>
+      </div>
+
+      <div class="repo" style="--lang-color:#565D6B">
+        <div class="repo-id">
+          <span class="org">LamoLanguage /</span>
+          <span class="name"><a href="https://github.com/LamoLanguage/LamoPacketManager" target="_blank" rel="noopener">LamoPacketManager</a></span>
+        </div>
+        <div class="repo-desc">
+          <p>The original standalone package manager for Lamo. Superseded once package management (<code>lamo install</code>, lockfiles) was folded directly into the main <code>lamo</code> binary — kept public as an archive.</p>
+          <div class="tags">
+            <span class="tag lang">C</span>
+            <span class="tag status-archived">archived</span>
+          </div>
+        </div>
+        <div class="repo-meta">★ 0<br>Apr 2026</div>
+      </div>
+
+      <div class="repo" style="--lang-color:#565D6B">
+        <div class="repo-id">
+          <span class="org">LamoLanguage /</span>
+          <span class="name"><a href="https://github.com/LamoLanguage/.github" target="_blank" rel="noopener">.github</a></span>
+        </div>
+        <div class="repo-desc">
+          <p>Organization-wide defaults: community health files, issue templates and shared configuration that apply across every Lamo repository.</p>
+          <div class="tags">
+            <span class="tag status-active">active · meta</span>
+          </div>
+        </div>
+        <div class="repo-meta">★ 0<br>—</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="num">05 / roadmap</span>
+      <h2>What's shipped, what's next</h2>
+      <p>Tracked in <a href="https://github.com/LamoLanguage/LamoLanguage/blob/main/roadmap.md" style="color:var(--accent); border-bottom:1px solid var(--accent-soft)">roadmap.md</a> and <a href="https://github.com/LamoLanguage/LamoLanguage/blob/main/todo.md" style="color:var(--accent); border-bottom:1px solid var(--accent-soft)">todo.md</a>.</p>
+    </div>
+    <div class="roadmap">
+      <div class="rm-item done"><div class="rm-text">Tagged-union enums — payload-carrying variants, <code>Some(x) =></code> binding in match</div></div>
+      <div class="rm-item done"><div class="rm-text">Module-boundary type flow — struct-typed returns across imports</div></div>
+      <div class="rm-item done"><div class="rm-text">Explicit type arguments on module member calls</div></div>
+      <div class="rm-item done"><div class="rm-text">Boolean print form — <code>print(true)</code> renders <code>true</code></div></div>
+      <div class="rm-item done"><div class="rm-text">Module rules — <code>pub</code> markers, folder modules, entry-file <code>main()</code> semantics</div></div>
+      <div class="rm-item done"><div class="rm-text">2.6.0 follow-ups — enum annotations, nested match patterns, <code>when</code> guards</div></div>
+      <div class="rm-item"><div class="rm-text">Traits</div></div>
+      <div class="rm-item"><div class="rm-text">AST-based pretty-printer for the formatter</div></div>
+      <div class="rm-item"><div class="rm-text">Language Server (LSP)</div></div>
+      <div class="rm-item"><div class="rm-text">Successor to the VS Code extension, built on the LSP</div></div>
+      <div class="rm-item"><div class="rm-text">Official documentation website</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-grid">
+    <div>
+      <div class="brand"><span class="spark">⚡</span>lamo</div>
+      <p>An experimental language, transpiler and small ecosystem around it. Unofficial fan site — not affiliated with GitHub.</p>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/LamoLanguage" target="_blank" rel="noopener">Organization</a>
+      <a href="https://github.com/LamoLanguage/LamoLanguage/blob/main/LICENSE" target="_blank" rel="noopener">License</a>
+      <a href="https://github.com/LamoLanguage/LamoLanguage/blob/main/docs/SPEC.md" target="_blank" rel="noopener">Spec</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Single orchestrated terminal typing sequence in the hero — runs once on load.
+  const el = document.getElementById('termBody');
+  const steps = [
+    {type:'prompt', text:'$ '},
+    {type:'cmd', text:'lamo run hello.lamo', delay:38},
+    {type:'pause', ms:280},
+    {type:'out', text:'Hello, World!'},
+    {type:'pause', ms:220},
+    {type:'prompt', text:'$ '},
+    {type:'cmd', text:'lamo test', delay:30},
+    {type:'pause', ms:260},
+    {type:'ok', text:'42 passed, 0 failed  (smoke, golden, runtime, stdlib)'},
+    {type:'pause', ms:180},
+    {type:'prompt', text:'$ '},
+    {type:'cmd', text:'lamo build hello.lamo -o hello', delay:26},
+    {type:'pause', ms:260},
+    {type:'out', text:'→ hello  (native binary, no runtime VM)'},
+  ];
+
+  function reduceMotion(){
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  async function run(){
+    if(reduceMotion()){
+      el.innerHTML = `
+        <div class="line"><span class="prompt">$ </span><span class="cmd">lamo run hello.lamo</span></div>
+        <div class="line out">Hello, World!</div>
+        <div class="line"><span class="prompt">$ </span><span class="cmd">lamo test</span></div>
+        <div class="line ok">42 passed, 0 failed  (smoke, golden, runtime, stdlib)</div>
+        <div class="line"><span class="prompt">$ </span><span class="cmd">lamo build hello.lamo -o hello</span></div>
+        <div class="line out">→ hello  (native binary, no runtime VM)</div>
+      `;
+      return;
+    }
+    let currentLine = document.createElement('div');
+    currentLine.className = 'line';
+    el.appendChild(currentLine);
+
+    for(const step of steps){
+      if(step.type === 'pause'){
+        await new Promise(r => setTimeout(r, step.ms));
+        continue;
+      }
+      if(step.type === 'prompt'){
+        currentLine = document.createElement('div');
+        currentLine.className = 'line';
+        el.appendChild(currentLine);
+        const span = document.createElement('span');
+        span.className = 'prompt';
+        span.textContent = step.text;
+        currentLine.appendChild(span);
+        continue;
+      }
+      if(step.type === 'cmd'){
+        const span = document.createElement('span');
+        span.className = 'cmd';
+        currentLine.appendChild(span);
+        for(const ch of step.text){
+          span.textContent += ch;
+          await new Promise(r => setTimeout(r, step.delay || 30));
+        }
+        continue;
+      }
+      if(step.type === 'out' || step.type === 'ok'){
+        const line = document.createElement('div');
+        line.className = 'line ' + step.type;
+        line.textContent = step.text;
+        el.appendChild(line);
+        continue;
+      }
+    }
+    const caretLine = document.createElement('div');
+    caretLine.className = 'line';
+    caretLine.innerHTML = '<span class="prompt">$ </span><span class="caret"></span>';
+    el.appendChild(caretLine);
+  }
+  run();
+</script>
+
+</body>
+</html>
