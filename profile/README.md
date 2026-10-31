@@ -67,7 +67,6 @@ Native HTTP server support and GUI backends (Win32 / X11).
 | ⚡ [**LamoLanguage**](https://github.com/LamoLanguage/LamoLanguage) | The core compiler, standard library, package manager, formatter, REPL & tests |
 | 🖼️ [**LamoImage**](https://github.com/LamoLanguage/LamoImage) | Reference implementation of the `.lamo` image container format |
 | 🧩 [**LamoLanguageVscode**](https://github.com/LamoLanguage/LamoLanguageVscode) | VS Code extension for Lamo syntax & tooling support |
-| 🤖 [**LamoLLM**](https://github.com/LamoLanguage/LamoLLM) | LLM-assisted tooling and workflows for the Lamo language |
 | 🗄️ [**LamoPacketManager**](https://github.com/LamoLanguage/LamoPacketManager) `archived` | Original standalone package manager, since folded into the core compiler |
 
 </div>
